@@ -28,7 +28,7 @@ client.on('guildMemberUpdate', (oldMember, newMember) => {
   if (!had && has) {
     const ch = newMember.guild.channels.cache.get(CHANNEL_ID);
     if (ch) {
-      ch.send(`${newMember.user.username} is now a Tester`);
+      ch.send(`${newMember.user.username} is now a Tester!`);
     }
   }
 });
