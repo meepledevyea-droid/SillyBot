@@ -15,19 +15,20 @@ const client = new Client({
   ]
 });
 
-// config (use Railway variables)
 const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID; // bot application id
-const GUILD_ID = process.env.GUILD_ID;   // your server id
+const TESTER_ROLE_ID = process.env.TESTER_ROLE_ID;
+const CHANNEL_ID = process.env.CHANNEL_ID;
+
+const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
 const ALLOWED_ROLE_ID = process.env.ALLOWED_ROLE_ID;
 
-// keep alive server
 http.createServer((req, res) => {
   res.writeHead(200);
   res.end('ok');
 }).listen(process.env.PORT || 3000);
 
-// slash command
+
 const commands = [
   new SlashCommandBuilder()
     .setName('say')
@@ -40,7 +41,6 @@ const commands = [
     .toJSON()
 ];
 
-// register command
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
@@ -59,14 +59,27 @@ client.once('ready', () => {
   console.log(client.user.tag);
 });
 
+\
+client.on('guildMemberUpdate', (oldMember, newMember) => {
+  const had = oldMember.roles.cache.has(TESTER_ROLE_ID);
+  const has = newMember.roles.cache.has(TESTER_ROLE_ID);
+
+  if (!had && has) {
+    const ch = newMember.guild.channels.cache.get(CHANNEL_ID);
+    if (ch) {
+      ch.send(`${newMember.user.username} is now a Tester`);
+    }
+  }
+});
+
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'say') {
-    // check role
+
     if (!interaction.member.roles.cache.has(ALLOWED_ROLE_ID)) {
       return interaction.reply({
-        content: 'You are not allowed to use this command',
+        content: 'Not allowed',
         ephemeral: true
       });
     }
