@@ -1,9 +1,14 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const OpenAI = require('openai');
+const fetch = require('node-fetch');
 const http = require('http');
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+  intents: [
+    GatewayIntentBits.Guilds, 
+    GatewayIntentBits.GuildMembers, 
+    GatewayIntentBits.GuildMessages, 
+    GatewayIntentBits.MessageContent
+  ]
 });
 
 const TOKEN = process.env.TOKEN;
@@ -12,11 +17,9 @@ const GUILD_ID = process.env.GUILD_ID;
 const TESTER_ROLE_ID = process.env.TESTER_ROLE_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
 const ALLOWED_ROLE_ID = process.env.ALLOWED_ROLE_ID;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const HF_KEY = process.env.HF_KEY;
 
 http.createServer((req, res) => { res.writeHead(200); res.end('ok'); }).listen(process.env.PORT || 3000);
-
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
 const commands = [
   new SlashCommandBuilder().setName('say').setDescription('Make the bot say something')
@@ -31,7 +34,10 @@ async function registerCommands() {
   catch (err) { console.error(err); }
 }
 
-client.once('ready', async () => { console.log(`Logged in as ${client.user.tag}`); await registerCommands(); });
+client.once('ready', async () => { 
+  console.log(`Logged in as ${client.user.tag}`); 
+  await registerCommands(); 
+});
 
 client.on('guildMemberUpdate', (oldMember, newMember) => {
   const hadRole = oldMember.roles.cache.has(TESTER_ROLE_ID);
@@ -52,20 +58,33 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// Hugging Face AI function
+async function getHFResponse(prompt) {
+  try {
+    const res = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${HF_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ inputs: prompt })
+    });
+    const data = await res.json();
+    if (data && data[0] && data[0].generated_text) return data[0].generated_text;
+    return "Hmm, I don't know what to say.";
+  } catch (e) {
+    console.error(e);
+    return "I ran into an error!";
+  }
+}
+
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
-  if (!message.mentions.has(client.user)) return;
-  const prompt = message.content.replace(`<@${client.user.id}>`, '').trim();
-  if (!prompt) return;
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 200
-    });
-    const reply = response.choices[0].message.content;
+  if (message.mentions.has(client.user)) {
+    const prompt = message.content.replace(`<@${client.user.id}>`, '').trim();
+    const reply = await getHFResponse(prompt);
     message.reply(reply);
-  } catch (err) { console.error(err); message.reply("I can't respond right now."); }
+  }
 });
 
 client.login(TOKEN);
