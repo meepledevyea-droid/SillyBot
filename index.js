@@ -1,37 +1,44 @@
-const {
-  Client,
-  GatewayIntentBits,
-  SlashCommandBuilder,
-  REST,
-  Routes
+const { 
+  Client, 
+  GatewayIntentBits, 
+  SlashCommandBuilder, 
+  REST, 
+  Routes 
 } = require('discord.js');
 
 const http = require('http');
+const { Configuration, OpenAIApi } = require('openai');
+
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ]
 });
 
-// ===== ENV VARIABLES =====
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
 const TESTER_ROLE_ID = process.env.TESTER_ROLE_ID;
 const CHANNEL_ID = process.env.CHANNEL_ID;
-
 const ALLOWED_ROLE_ID = process.env.ALLOWED_ROLE_ID;
 
-// ===== KEEP ALIVE SERVER =====
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
 http.createServer((req, res) => {
   res.writeHead(200);
   res.end('ok');
 }).listen(process.env.PORT || 3000);
 
-// ===== SLASH COMMAND =====
+const configuration = new Configuration({
+  apiKey: OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
 const commands = [
   new SlashCommandBuilder()
     .setName('say')
@@ -44,7 +51,6 @@ const commands = [
     .toJSON()
 ];
 
-// ===== REGISTER COMMAND =====
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 async function registerCommands() {
@@ -59,13 +65,11 @@ async function registerCommands() {
   }
 }
 
-// ===== READY =====
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
   await registerCommands();
 });
 
-// ===== ROLE DETECTION =====
 client.on('guildMemberUpdate', (oldMember, newMember) => {
   const hadRole = oldMember.roles.cache.has(TESTER_ROLE_ID);
   const hasRole = newMember.roles.cache.has(TESTER_ROLE_ID);
@@ -78,7 +82,7 @@ client.on('guildMemberUpdate', (oldMember, newMember) => {
   }
 });
 
-// ===== SLASH COMMAND HANDLER =====
+
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -95,6 +99,27 @@ client.on('interactionCreate', async (interaction) => {
 
     await interaction.reply({ content: 'Sent', ephemeral: true });
     await interaction.channel.send(text);
+  }
+});
+
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return; 
+  if (!message.mentions.has(client.user)) return; 
+  const prompt = message.content.replace(`<@${client.user.id}>`, '').trim();
+  if (!prompt) return;
+
+  try {
+    const response = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 200
+    });
+
+    const reply = response.data.choices[0].message.content;
+    message.reply(reply);
+  } catch (err) {
+    console.error('AI error:', err);
+    message.reply("I can't respond right now.");
   }
 });
 
