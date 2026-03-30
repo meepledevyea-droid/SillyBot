@@ -1,15 +1,17 @@
 {
-  "name": "tester-bot",
+  "name": "SillyBot",
   "version": "1.0.0",
+  "description": "Discord bot with real AI",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
+  "dependencies": {
+    "discord.js": "^14.11.0",
+    "node-fetch": "^3.3.2"
+  },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "discord.js": "^14.14.1",
-    "openai": "^4.8.0"
   }
 }
