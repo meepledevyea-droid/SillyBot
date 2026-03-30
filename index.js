@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 const http = require('http');
 
 const client = new Client({
@@ -16,8 +16,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 http.createServer((req, res) => { res.writeHead(200); res.end('ok'); }).listen(process.env.PORT || 3000);
 
-const configuration = new Configuration({ apiKey: OPENAI_API_KEY });
-const openai = new OpenAIApi(configuration);
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
 const commands = [
   new SlashCommandBuilder().setName('say').setDescription('Make the bot say something')
@@ -59,8 +58,12 @@ client.on('messageCreate', async (message) => {
   const prompt = message.content.replace(`<@${client.user.id}>`, '').trim();
   if (!prompt) return;
   try {
-    const response = await openai.createChatCompletion({ model: "gpt-3.5-turbo", messages: [{ role: "user", content: prompt }], max_tokens: 200 });
-    const reply = response.data.choices[0].message.content;
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 200
+    });
+    const reply = response.choices[0].message.content;
     message.reply(reply);
   } catch (err) { console.error(err); message.reply("I can't respond right now."); }
 });
