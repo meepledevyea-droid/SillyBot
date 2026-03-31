@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const fetch = require('node-fetch');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const http = require('http');
 
 const client = new Client({
@@ -71,8 +71,7 @@ async function getHFResponse(prompt) {
       body: JSON.stringify({ inputs: prompt })
     });
     const data = await res.json();
-    if (data && data[0] && data[0].generated_text) return data[0].generated_text;
-    return "I don't know what to say.";
+    return data[0]?.generated_text || "I don't know what to say.";
   } catch (e) {
     console.error(e);
     return "Error generating response!";
