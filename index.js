@@ -4,9 +4,9 @@ const http = require('http');
 
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds, 
-    GatewayIntentBits.GuildMembers, 
-    GatewayIntentBits.GuildMessages, 
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent
   ]
 });
@@ -22,7 +22,9 @@ const HF_KEY = process.env.HF_KEY;
 http.createServer((req, res) => { res.writeHead(200); res.end('ok'); }).listen(process.env.PORT || 3000);
 
 const commands = [
-  new SlashCommandBuilder().setName('say').setDescription('Make the bot say something')
+  new SlashCommandBuilder()
+    .setName('say')
+    .setDescription('Make the bot say something')
     .addStringOption(option => option.setName('text').setDescription('Message to send').setRequired(true))
     .toJSON()
 ];
@@ -58,7 +60,6 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// Hugging Face AI function
 async function getHFResponse(prompt) {
   try {
     const res = await fetch('https://api-inference.huggingface.co/models/gpt2', {
@@ -71,10 +72,10 @@ async function getHFResponse(prompt) {
     });
     const data = await res.json();
     if (data && data[0] && data[0].generated_text) return data[0].generated_text;
-    return "Hmm, I don't know what to say.";
+    return "I don't know what to say.";
   } catch (e) {
     console.error(e);
-    return "I ran into an error!";
+    return "Error generating response!";
   }
 }
 
